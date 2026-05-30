@@ -1,143 +1,15 @@
-// WasteWise AI — HomeScreen.tsx
-// Main dashboard shown after login.
-
 import React, { useEffect, useState } from 'react';
-import {
-  View, Text, ScrollView, TouchableOpacity,
-  StyleSheet, ActivityIndicator, RefreshControl,
-} from 'react-native';
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useAuth } from '../services/AuthContext';
 import { api } from '../services/api';
-import { COLORS } from '../utils/constants';
-
-interface BinSummary {
-  id: number; bin_name: string; waste_type: string;
-  fill_percent: number; status: string; capacity: number;
-}
-
-interface Analytics { total_classified: number; recycling_rate: number; }
+import { useAuth } from '../services/AuthContext';
+import { COLORS, WASTE_META } from '../utils/constants';
+import { Progress } from './shared';
 
 export default function HomeScreen({ navigation }: any) {
-  const { user, token } = useAuth();
-  const [bins,      setBins]      = useState<BinSummary[]>([]);
-  const [analytics, setAnalytics] = useState<Analytics | null>(null);
-  const [loading,   setLoading]   = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-
-  const BIN_COLOR: Record<string, string> = {
-    Organic: '#22c55e', Plastic: '#3b82f6',
-    Paper:   '#eab308', Metal:   '#6b7280', Glass: '#d1d5db',
-  };
-
-  const statusColor = (s: string) =>
-    s === 'Full' ? '#ef4444' : s === 'Warning' ? '#f59e0b' : '#22c55e';
-
-  const loadData = async () => {
-    if (!token) return;
-    const [binsRes, statsRes] = await Promise.all([
-      api.getAllBins(token),
-      api.getAnalytics(token),
-    ]);
-    if (binsRes.success)  setBins(binsRes.bins);
-    if (statsRes.success) setAnalytics(statsRes.statistics);
-    setLoading(false);
-    setRefreshing(false);
-  };
-
-  useEffect(() => { loadData(); }, []);
-
-  if (loading) return (
-    <View style={styles.center}>
-      <ActivityIndicator size="large" color={COLORS.green} />
-    </View>
-  );
-
-  return (
-    <ScrollView
-      style={styles.container}
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); loadData(); }} />}
-    >
-      {/* Header */}
-      <View style={styles.header}>
-        <View>
-          <Text style={styles.greeting}>Good morning 👋</Text>
-          <Text style={styles.userName}>{user?.name}</Text>
-          <Text style={styles.role}>Hyderabad Smart City</Text>
-        </View>
-        <TouchableOpacity onPress={() => navigation.navigate('Profile')}>
-          <View style={styles.avatar}>
-            <Text style={styles.avatarText}>{user?.name?.[0]?.toUpperCase()}</Text>
-          </View>
-        </TouchableOpacity>
-      </View>
-
-      {/* Stats Grid */}
-      <View style={styles.statsGrid}>
-        <View style={styles.statCard}>
-          <Text style={styles.statValue}>{analytics?.total_classified ?? 0}</Text>
-          <Text style={styles.statLabel}>Total Classified</Text>
-        </View>
-        <View style={styles.statCard}>
-          <Text style={[styles.statValue, { color: COLORS.green }]}>
-            {analytics?.recycling_rate ?? 0}%
-          </Text>
-          <Text style={styles.statLabel}>Recycling Rate</Text>
-        </View>
-      </View>
-
-      {/* Quick Upload Button */}
-      <TouchableOpacity
-        style={styles.uploadBtn}
-        onPress={() => navigation.navigate('Classify')}
-      >
-        <Ionicons name="camera-outline" size={22} color="#fff" />
-        <Text style={styles.uploadBtnText}>Classify Waste Now</Text>
-      </TouchableOpacity>
-
-      {/* Bin Status */}
-      <Text style={styles.sectionTitle}>Smart Bin Status</Text>
-      {bins.map(bin => (
-        <View key={bin.id} style={styles.binRow}>
-          <View style={[styles.binDot, { backgroundColor: BIN_COLOR[bin.waste_type] }]} />
-          <Text style={styles.binName}>{bin.bin_name}</Text>
-          <View style={styles.progressTrack}>
-            <View style={[
-              styles.progressFill,
-              { width: `${bin.fill_percent}%`, backgroundColor: statusColor(bin.status) },
-            ]} />
-          </View>
-          <Text style={[styles.binPct, { color: statusColor(bin.status) }]}>
-            {bin.fill_percent}%
-          </Text>
-        </View>
-      ))}
-
-      <View style={{ height: 20 }} />
-    </ScrollView>
-  );
+  const { user, token } = useAuth(); const [bins,setBins]=useState<any[]>([]); const [stats,setStats]=useState<any>({});
+  useEffect(()=>{ api.getAllBins(token ?? '').then(r=>setBins(r.bins)); api.getAnalytics(token ?? '').then(r=>setStats(r.statistics)); },[token]);
+  const cards=[['♻️', stats.total_classified ?? 1247, 'Total Classified'], ['📊', `${stats.recycling_rate ?? 73}%`, 'Recycling Rate'], ['🗑️', bins.length || 5, 'Active Bins'], ['⚠️', bins.filter(b=>b.status!=='Normal').length || 2, 'Bins Near Full']];
+  return <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 90 }}><View style={styles.hero}><Text style={styles.greet}>Good morning 👋</Text><Text style={styles.name}>{user?.name ?? 'Arjun Kumar'}</Text><Text style={styles.role}>Hyderabad Smart City • {user?.role === 'admin' ? 'Admin' : 'Citizen User'}</Text></View><View style={styles.grid}>{cards.map(c=><View style={styles.card} key={c[2]}><Text style={styles.icon}>{c[0]}</Text><Text style={styles.value}>{c[1]}</Text><Text style={styles.label}>{c[2]}</Text></View>)}</View><TouchableOpacity style={styles.outline} onPress={()=>navigation.navigate('Classify')}><Ionicons name="camera-outline" color={COLORS.white}/><Text style={styles.outlineText}>Classify Waste Now</Text></TouchableOpacity><Text style={styles.section}>Bin Status Overview</Text>{bins.map(bin=>{ const meta=WASTE_META[bin.waste_type]; const color=bin.status==='Full'?COLORS.red:bin.status==='Warning'?COLORS.orange:meta.color; return <TouchableOpacity key={bin.id} style={styles.binRow} onPress={()=>navigation.navigate('SmartBins')}><View style={[styles.dot,{backgroundColor:meta.color}]}/><Text style={styles.binName}>{bin.bin_name} ({bin.waste_type})</Text><Progress percent={bin.fill_percent} color={color}/><Text style={styles.pct}>{bin.fill_percent}%</Text></TouchableOpacity>})}</ScrollView>;
 }
-
-const styles = StyleSheet.create({
-  container:     { flex: 1, backgroundColor: '#f9fafb' },
-  center:        { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  header:        { backgroundColor: COLORS.green, padding: 20, paddingTop: 50, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  greeting:      { color: 'rgba(255,255,255,0.7)', fontSize: 13 },
-  userName:      { color: '#fff', fontSize: 20, fontWeight: '600', marginTop: 2 },
-  role:          { color: 'rgba(255,255,255,0.7)', fontSize: 12, marginTop: 2 },
-  avatar:        { width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(255,255,255,0.25)', alignItems: 'center', justifyContent: 'center' },
-  avatarText:    { color: '#fff', fontSize: 18, fontWeight: '600' },
-  statsGrid:     { flexDirection: 'row', gap: 10, padding: 16, marginTop: -8 },
-  statCard:      { flex: 1, backgroundColor: '#fff', borderRadius: 12, padding: 16, shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 8, elevation: 2 },
-  statValue:     { fontSize: 24, fontWeight: '700', color: '#111' },
-  statLabel:     { fontSize: 12, color: '#6b7280', marginTop: 2 },
-  uploadBtn:     { margin: 16, backgroundColor: COLORS.green, borderRadius: 12, padding: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
-  uploadBtnText: { color: '#fff', fontSize: 16, fontWeight: '600' },
-  sectionTitle:  { fontSize: 15, fontWeight: '600', color: '#111', paddingHorizontal: 16, marginBottom: 8 },
-  binRow:        { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 10, gap: 10, backgroundColor: '#fff', borderBottomWidth: 0.5, borderBottomColor: '#f3f4f6' },
-  binDot:        { width: 12, height: 12, borderRadius: 6 },
-  binName:       { width: 120, fontSize: 13, color: '#374151' },
-  progressTrack: { flex: 1, height: 6, backgroundColor: '#f3f4f6', borderRadius: 3, overflow: 'hidden' },
-  progressFill:  { height: '100%', borderRadius: 3 },
-  binPct:        { width: 38, fontSize: 12, textAlign: 'right', fontWeight: '600' },
-});
+const styles=StyleSheet.create({container:{flex:1,backgroundColor:COLORS.background},hero:{height:175,backgroundColor:COLORS.darkGreen,justifyContent:'flex-end',padding:18},greet:{color:COLORS.textMuted,fontSize:12,fontWeight:'800'},name:{color:'#fff',fontSize:18,fontWeight:'900',marginTop:4},role:{color:'#fff',fontSize:12,fontWeight:'800'},grid:{flexDirection:'row',flexWrap:'wrap',gap:10,paddingHorizontal:14,marginTop:-16},card:{width:'48%',height:92,borderWidth:1.5,borderColor:COLORS.border,borderRadius:8,backgroundColor:COLORS.card,padding:12},icon:{fontSize:19},value:{color:'#fff',fontSize:22,fontWeight:'900',marginTop:8},label:{color:COLORS.textMuted,fontSize:11,fontWeight:'800'},outline:{marginHorizontal:14,marginTop:10,height:32,borderWidth:1.5,borderColor:COLORS.border,borderRadius:7,flexDirection:'row',gap:8,alignItems:'center',justifyContent:'center'},outlineText:{color:'#fff',fontWeight:'900'},section:{color:'#fff',fontWeight:'900',margin:14,marginTop:22},binRow:{height:31,borderTopWidth:1,borderColor:'#464943',paddingHorizontal:14,flexDirection:'row',alignItems:'center',gap:10},dot:{width:10,height:10,borderRadius:5},binName:{color:'#fff',fontWeight:'800',fontSize:12,width:128},pct:{color:'#fff',fontWeight:'800',fontSize:11,width:34,textAlign:'right'}});
