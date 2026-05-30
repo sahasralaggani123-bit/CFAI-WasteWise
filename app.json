@@ -1,0 +1,48 @@
+{
+  "expo": {
+    "name": "WasteWise AI",
+    "slug": "wastewise-ai",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "automatic",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#1a7a4a"
+    },
+    "plugins": [
+      [
+        "expo-camera",
+        { "cameraPermission": "WasteWise AI needs camera access to classify waste." }
+      ],
+      [
+        "expo-image-picker",
+        { "photosPermission": "WasteWise AI needs photo library access to upload waste images." }
+      ],
+      [
+        "expo-location",
+        { "locationAlwaysAndWhenInUsePermission": "WasteWise AI needs location to find nearby bins." }
+      ]
+    ],
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#1a7a4a"
+      },
+      "permissions": [
+        "CAMERA",
+        "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE",
+        "ACCESS_FINE_LOCATION"
+      ]
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.wastewise.ai"
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    }
+  }
+}
